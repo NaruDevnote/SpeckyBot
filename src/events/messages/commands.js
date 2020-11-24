@@ -124,10 +124,50 @@ module.exports.call = async (bot, m) => {
                 }
             }
 
+            if(cmd.limited){
+                let reas = null;
+
+                const limits = [
+                    'servers',
+                    'channels',
+                    'users'
+                ];
+
+                limits.some(s => {
+                    if(!cmd.limited[s]) return false;
+                    if(!Array.isArray(cmd.limited[s])) cmd.limited[s] = [cmd.limited[s]];
+                    return cmd.limited[s]
+                    .some(v => {
+                        switch(s){
+                            case limits[0]:
+                                return cmd.limited[s].includes(msg.guild.id) ||
+                                    cmd.limited[s].includes(msg.guild.name);
+                            case limits[1]:
+                                return cmd.limited[s].includes(msg.channel.id) ||
+                                    cmd.limited[s].includes(msg.channel.name);
+                            case limits[2]:
+                                return cmd.limited[s].includes(msg.author.id) ||
+                                    cmd.limited[s].includes(msg.author.tag) ||
+                                    isNaN(msg.author.username) ? cmd.limited[s].includes(msg.author.username) : false;
+                        }
+                    })
+                });
+            }
+
             if(cmd.botPerms){
                 const perms = cmd.botPerms.filter(perm => msg.guild ? !msg.guild.me.hasPermission(perm) : false)
                 if(perms.length && check(false, botPermError)){
                     return msg.channel.send(error(`${botPermError}\nMissing permission: \`${perms.join(', ')}\``))
+                }
+            }
+
+            if(msg.channel.type != "dm" && !(msg.member.hasPermission(["ADMINISTRATOR"]))){
+                if(cmd.userPerms){
+                    if(!msg.member.hasPermission(cmd.userPerms)){
+                        if(check(false, userPermError)){
+                            return msg.channel.send(error(userPermError))
+                        }
+                    }
                 }
             }
 
@@ -153,16 +193,6 @@ module.exports.call = async (bot, m) => {
                     }
                 }
 
-            }
-
-            if(msg.channel.type != "dm" && !(msg.member.hasPermission(["ADMINISTRATOR"]))){
-                if(cmd.userPerms){
-                    if(!msg.member.hasPermission(cmd.userPerms)){
-                        if(check(false, userPermError)){
-                            return msg.channel.send(error(userPermError))
-                        }
-                    }
-                }
             }
 
             if(cmd.servers){
